@@ -1,0 +1,223 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'linksundas981@gmail.com'
+      );
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll([
+        'uid',
+        'displayName',
+        'email',
+        'phone',
+        'membershipStatus',
+        'membershipFeePkr',
+        'preferredPayment',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid',
+        'displayName',
+        'email',
+        'phone',
+        'robloxUsername',
+        'membershipStatus',
+        'membershipFeePkr',
+        'preferredPayment',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      isValidId(data.uid) &&
+      data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+      data.phone is string && data.phone.size() >= 7 && data.phone.size() <= 25 &&
+      (!('robloxUsername' in data) || (data.robloxUsername is string && data.robloxUsername.size() <= 40)) &&
+      data.membershipStatus is string && data.membershipStatus in ['pending_payment', 'active'] &&
+      data.membershipFeePkr is number && data.membershipFeePkr == 1300 &&
+      data.preferredPayment is string && data.preferredPayment in ['PKR', 'Robux'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+        'bookingId',
+        'userId',
+        'customerName',
+        'customerPhone',
+        'packageId',
+        'packageLabel',
+        'packagePricePkr',
+        'gameFocus',
+        'sessionDate',
+        'timeSlot',
+        'snacks',
+        'snacksTotalPkr',
+        'paymentMethod',
+        'status',
+        'notes',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'bookingId',
+        'userId',
+        'customerName',
+        'customerPhone',
+        'packageId',
+        'packageLabel',
+        'packagePricePkr',
+        'gameFocus',
+        'sessionDate',
+        'timeSlot',
+        'snacks',
+        'snacksTotalPkr',
+        'paymentMethod',
+        'status',
+        'notes',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      isValidId(data.bookingId) &&
+      isValidId(data.userId) &&
+      data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 80 &&
+      data.customerPhone is string && data.customerPhone.size() >= 7 && data.customerPhone.size() <= 25 &&
+      data.packageId is string && data.packageId in ['15m', '30m', '1h', '3h', 'pro5h'] &&
+      data.packageLabel is string && data.packageLabel.size() >= 1 && data.packageLabel.size() <= 60 &&
+      data.packagePricePkr is number && data.packagePricePkr >= 0 && data.packagePricePkr <= 100000 &&
+      data.gameFocus is string && data.gameFocus in ['Excessive VR', 'Roblox VR', 'Minecraft VR', 'PS5 Waitlist (Dec)'] &&
+      data.sessionDate is string && data.sessionDate.size() == 10 && data.sessionDate.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+      data.timeSlot is string && data.timeSlot.size() >= 1 && data.timeSlot.size() <= 30 &&
+      data.snacks is list && data.snacks.size() <= 10 &&
+      (data.snacks.size() == 0 || (data.snacks[0] is string && data.snacks[0].size() <= 60)) &&
+      data.snacksTotalPkr is number && data.snacksTotalPkr >= 0 && data.snacksTotalPkr <= 50000 &&
+      data.paymentMethod is string && data.paymentMethod in ['PKR Cash', 'Robux (Ibirahim60)', 'Robux (Abdd332211)'] &&
+      data.status is string && data.status in ['pending', 'confirmed', 'cancelled'] &&
+      data.notes is string && data.notes.size() <= 300 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidClosure(data, dateStr) {
+      return data.keys().hasAll(['dateStr', 'reason', 'createdBy', 'createdAt']) &&
+      data.keys().hasOnly(['dateStr', 'reason', 'createdBy', 'createdAt']) &&
+      data.dateStr is string && data.dateStr.size() == 10 && data.dateStr == dateStr &&
+      data.dateStr.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+      data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 140 &&
+      isValidId(data.createdBy) &&
+      data.createdAt is timestamp;
+    }
+
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list, create, update, delete: if false;
+    }
+
+    match /members/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidMember(incoming()) &&
+        isOwner(userId) &&
+        incoming().uid == request.auth.uid &&
+        incoming().membershipStatus == 'pending_payment' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidMember(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().membershipStatus == existing().membershipStatus &&
+            incoming().membershipFeePkr == existing().membershipFeePkr &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'phone', 'robloxUsername', 'preferredPayment', 'updatedAt'])
+          )
+        );
+      allow delete: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow get: if isSignedIn() && isValidId(bookingId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedUser() &&
+        isValidId(bookingId) &&
+        isValidBooking(incoming()) &&
+        incoming().bookingId == bookingId &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(bookingId) &&
+        isValidBooking(incoming()) &&
+        incoming().bookingId == existing().bookingId &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().status == 'pending' &&
+            incoming().status == 'cancelled' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isAdmin();
+    }
+
+    match /schedule_closures/{dateStr} {
+      allow get: if dateStr is string && dateStr.size() == 10 && dateStr.matches('^\\d{4}-\\d{2}-\\d{2}$');
+      allow list: if true;
+      allow create: if isAdmin() &&
+        isValidClosure(incoming(), dateStr) &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() &&
+        isValidClosure(incoming(), dateStr) &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['reason']);
+      allow delete: if isAdmin();
+    }
+  }
+}

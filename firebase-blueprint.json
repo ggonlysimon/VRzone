@@ -1,0 +1,218 @@
+{
+  "entities": {
+    "MemberAccount": {
+      "title": "MemberAccount",
+      "description": "Private VRzone member account registration (PKR 1,300).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 25
+        },
+        "robloxUsername": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "membershipStatus": {
+          "type": "string",
+          "enum": ["pending_payment", "active"]
+        },
+        "membershipFeePkr": {
+          "type": "number"
+        },
+        "preferredPayment": {
+          "type": "string",
+          "enum": ["PKR", "Robux"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "email",
+        "phone",
+        "membershipStatus",
+        "membershipFeePkr",
+        "preferredPayment",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SessionBooking": {
+      "title": "SessionBooking",
+      "description": "VR gaming session reservation at VRzone House 113, G-10/1, Islamabad.",
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "customerPhone": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 25
+        },
+        "packageId": {
+          "type": "string",
+          "enum": ["15m", "30m", "1h", "3h", "pro5h"]
+        },
+        "packageLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "packagePricePkr": {
+          "type": "number"
+        },
+        "gameFocus": {
+          "type": "string",
+          "enum": ["Excessive VR", "Roblox VR", "Minecraft VR", "PS5 Waitlist (Dec)"]
+        },
+        "sessionDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "timeSlot": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "snacks": {
+          "type": "array"
+        },
+        "snacksTotalPkr": {
+          "type": "number"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["PKR Cash", "Robux (Ibirahim60)", "Robux (Abdd332211)"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "cancelled"]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "bookingId",
+        "userId",
+        "customerName",
+        "customerPhone",
+        "packageId",
+        "packageLabel",
+        "packagePricePkr",
+        "gameFocus",
+        "sessionDate",
+        "timeSlot",
+        "snacks",
+        "snacksTotalPkr",
+        "paymentMethod",
+        "status",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ScheduleClosure": {
+      "title": "ScheduleClosure",
+      "description": "Closed dates marked by the studio operator.",
+      "type": "object",
+      "properties": {
+        "dateStr": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["dateStr", "reason", "createdBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/members/{userId}": {
+      "schema": {
+        "$ref": "#/entities/MemberAccount"
+      },
+      "description": "Private member account profiles containing PII and PKR 1,300 registration status."
+    },
+    "/bookings/{bookingId}": {
+      "schema": {
+        "$ref": "#/entities/SessionBooking"
+      },
+      "description": "VR gaming session reservations and snack add-ons."
+    },
+    "/schedule_closures/{dateStr}": {
+      "schema": {
+        "$ref": "#/entities/ScheduleClosure"
+      },
+      "description": "Publicly readable closed dates configured by the VRzone owner."
+    }
+  }
+}
